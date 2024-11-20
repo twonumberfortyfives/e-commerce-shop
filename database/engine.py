@@ -1,36 +1,26 @@
 import os
+import dotenv
+from sqlmodel import SQLModel
 
-from sqlalchemy import create_engine
+from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.orm import sessionmaker
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
-from sqlalchemy.orm import declarative_base, sessionmaker
-from dotenv import load_dotenv
+
+
+dotenv.load_dotenv()
+
+
+DATABASE_URL = os.getenv(
+    "DATABASE_URL"
+)  # change if connecting via IDE/docker container
+
+engine = create_async_engine(DATABASE_URL, echo=True, future=True)
+async_session = sessionmaker(bind=engine, class_=AsyncSession, expire_on_commit=False,)
+
+
+async def init_db():
+    async with engine.begin() as conn:
+        await conn.run_sync(SQLModel.metadata.create_all)
+
 
 Base = declarative_base()
-load_dotenv()
-
-
-DB_USER = os.getenv("DB_USER")
-DB_PASSWORD = os.getenv("DB_PASSWORD")
-DB_HOST = os.getenv("DB_HOST")
-DB_PORT = os.getenv("DB_PORT")
-DB_NAME = os.getenv("DB_NAME")
-
-
-class AsyncDatabaseSession:
-    def __init__(self):
-        self._session = None
-        self._engine = None
-
-    def __getattr__(self, name):
-        return getattr(self._session, name)
-
-    def init(self):
-        self._engine = create_async_engine(
-            f"postgresql+asyncpg://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}",
-            future=True,
-            echo=True,
-        )
-        self._session = sessionmaker(self._engine, expire_on_commit=False, class_=AsyncSession)()
-
-    async def create_all(self):
-        self._engine.begin

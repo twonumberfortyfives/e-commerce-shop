@@ -16,4 +16,4 @@ RUN apt-get update && apt-get install -y postgresql-client
 COPY . .
 
 # Run Alembic migrations and start the FastAPI application
-CMD ["fastapi", "run", "main.py", "--port", "8000"]
+CMD ["sh", "-c", "until pg_isready -h postgres -p 5432; do echo 'Waiting for PostgreSQL...'; sleep 2; done; alembic upgrade head; uvicorn main:app --host 0.0.0.0 --port 8000 --reload"]
