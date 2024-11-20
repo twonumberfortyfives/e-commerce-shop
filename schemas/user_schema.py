@@ -16,13 +16,11 @@ class User:
 
 @strawberry.type
 class Query:
-    async def get_users_from_db(self, db: AsyncSession) -> List[User]:
-        return await get_all_users(db)
-
-    @strawberry.field(graphql_type=User)
-    async def get_all_users(self, db: AsyncSession = Depends(get_db)) -> List[User]:
-        array_of_users = [User(username=user.username, email=user.email) for user in await get_all_users(db)]
-        return array_of_users
+    @strawberry.field(graphql_type=list[User])
+    async def get_all_users(self, info) -> List[User]:
+        db = info.context["db"]
+        db_users = await get_all_users(db)
+        return [User(username=user.username, email=user.email) for user in db_users]
 
 
 schema = strawberry.Schema(Query)
