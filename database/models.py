@@ -17,7 +17,14 @@ class Role(PyEnum):
 class DBUser(Base):
     __tablename__ = "users"
 
-    id = Column(Integer, primary_key=True, autoincrement=True, nullable=False, unique=True, index=True)
+    id = Column(
+        Integer,
+        primary_key=True,
+        autoincrement=True,
+        nullable=False,
+        unique=True,
+        index=True,
+    )
     username = Column(String, nullable=False, unique=True)
     password = Column(String, nullable=False)
     email = Column(String, nullable=False, unique=True)
@@ -25,4 +32,6 @@ class DBUser(Base):
     role = Column(ENUM(Role), nullable=False, default=Role.user)
     phone_number = Column(String, nullable=False)
     is_verified = Column(Boolean, nullable=False, default=False)
-    created_at = Column(DateTime, default=datetime.datetime.now(tz=pytz.timezone('UTC')))
+    created_at = Column(
+        DateTime, default=datetime.datetime.now(tz=pytz.timezone("UTC"))
+    )

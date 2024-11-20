@@ -15,7 +15,11 @@ DATABASE_URL = os.getenv(
 )  # change if connecting via IDE/docker container
 
 engine = create_async_engine(DATABASE_URL, echo=True, future=True)
-async_session = sessionmaker(bind=engine, class_=AsyncSession, expire_on_commit=False,)
+async_session = sessionmaker(
+    bind=engine,
+    class_=AsyncSession,
+    expire_on_commit=False,
+)
 
 
 async def init_db():
