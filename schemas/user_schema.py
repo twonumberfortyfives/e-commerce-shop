@@ -1,11 +1,10 @@
 from datetime import datetime
 
+import pytz
 import strawberry
-from typing import List, Optional
 
 from serializers.user_serializer import UserCreate
-from services.user_service import get_all_users, get_user_by_id, \
-    create_user  # A function you will define to get data from DB
+from services.user_service import get_all_users, get_user_by_id, create_user
 
 
 @strawberry.type
@@ -15,9 +14,19 @@ class User:
     email: str
     profile_picture: str
     role: str
-    phone_number: str
+    phone_number: str | None
     is_verified: bool
     created_at: datetime
+
+    @strawberry.field(name="createdAt")  # This maps to the query field `createdAt`
+    def created_at_with_timezone(self) -> str:
+        """Format created_at as a string in UTC with 'Z'."""
+        if isinstance(self.created_at, str):
+            self.created_at = datetime.fromisoformat(self.created_at)
+
+        utc_time = self.created_at.astimezone(pytz.utc)
+
+        return utc_time.isoformat().replace("+00:00", "Z")
 
 
 async def map_user(found_user) -> User:
@@ -36,8 +45,8 @@ async def map_user(found_user) -> User:
 
 @strawberry.type
 class Query:
-    @strawberry.field(graphql_type=List[User], description="List of users")
-    async def get_all_users(self, info) -> List[User]:
+    @strawberry.field(graphql_type=list[User], description="List of users")
+    async def get_all_users(self, info) -> list[User]:
         db = info.context["db"]
         db_users = await get_all_users(db=db)
         return [
@@ -54,7 +63,7 @@ class Query:
 
 @strawberry.type
 class Mutation:
-    @strawberry.mutation(description="Create a new user")
+    @strawberry.mutation(graphql_type=User, description="Create a new user")
     async def create_user(self, username: str, email: str, password: str, password_confirm: str, info) -> User:
         db = info.context["db"]
         user_serializer = UserCreate(
