@@ -26,6 +26,7 @@ async def fetch_users(db: AsyncSession = Depends(get_db)):
     )  # Pass the session to the query
     return JSONResponse(content=result.data)
 
+
 #
 # @router.get("/users")
 # async def fetch_users(db: AsyncSession = Depends(get_db)):

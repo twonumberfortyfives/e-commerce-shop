@@ -49,10 +49,7 @@ class Query:
     async def get_all_users(self, info) -> list[User]:
         db = info.context["db"]
         db_users = await get_all_users(db=db)
-        return [
-            await map_user(user)
-            for user in db_users
-        ]
+        return [await map_user(user) for user in db_users]
 
     @strawberry.field(graphql_type=User, description="Get user by id")
     async def get_user_by_id(self, user_id: int, info) -> User:
@@ -64,7 +61,9 @@ class Query:
 @strawberry.type
 class Mutation:
     @strawberry.mutation(graphql_type=User, description="Create a new user")
-    async def create_user(self, username: str, email: str, password: str, password_confirm: str, info) -> User:
+    async def create_user(
+        self, username: str, email: str, password: str, password_confirm: str, info
+    ) -> User:
         db = info.context["db"]
         user_serializer = UserCreate(
             username=username,

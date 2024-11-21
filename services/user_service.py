@@ -16,15 +16,14 @@ async def get_all_users(db: AsyncSession):
     except Exception as exc:
         raise HTTPException(
             status_code=500,
-            detail=f"An error occurred while fetching the user: {str(exc)}"
+            detail=f"An error occurred while fetching the user: {str(exc)}",
         )
 
 
 async def get_user_by_id(db: AsyncSession, user_id: int):
     try:
         query = await db.execute(
-            select(models.DBUser)
-            .filter(models.DBUser.id == user_id)
+            select(models.DBUser).filter(models.DBUser.id == user_id)
         )
         found_user = query.scalars().first()
         if found_user:
@@ -33,8 +32,9 @@ async def get_user_by_id(db: AsyncSession, user_id: int):
     except Exception as exc:
         raise HTTPException(
             status_code=500,
-            detail=f"An error occurred while fetching the user: {str(exc)}"
+            detail=f"An error occurred while fetching the user: {str(exc)}",
         )
+
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
@@ -50,9 +50,7 @@ async def verify_password(plain_password: str, hashed_password: str) -> bool:
 async def create_user(user_serializer: UserCreate, db: AsyncSession):
     try:
         user_email_match = await db.execute(
-            select(models.DBUser).filter(
-                models.DBUser.email == user_serializer.email
-            )
+            select(models.DBUser).filter(models.DBUser.email == user_serializer.email)
         )
         user_username_match = await db.execute(
             select(models.DBUser).filter(
@@ -80,5 +78,5 @@ async def create_user(user_serializer: UserCreate, db: AsyncSession):
     except Exception as exc:
         raise HTTPException(
             status_code=500,
-            detail=f"An error occurred while creating the user: {str(exc)}"
+            detail=f"An error occurred while creating the user: {str(exc)}",
         )
