@@ -1,4 +1,8 @@
+import os
+
 from fastapi import FastAPI, Depends
+from fastapi.security import OAuth2PasswordBearer
+from passlib.context import CryptContext
 from strawberry.fastapi import GraphQLRouter
 
 from api.v1.user import router as user_router

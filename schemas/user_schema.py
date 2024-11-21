@@ -1,10 +1,18 @@
-from datetime import datetime
+import os
+from datetime import datetime, timedelta
 
 import pytz
 import strawberry
+from fastapi import HTTPException
 
-from serializers.user_serializer import UserCreate
-from services.user_service import get_all_users, get_user_by_id, create_user
+from serializers.user_serializer import UserCreate, Token, LoginInput
+from services.user_service import get_all_users, get_user_by_id, create_user, authenticate_user, create_access_token
+from dotenv import load_dotenv
+
+
+load_dotenv()
+
+ACCESS_TOKEN_EXPIRE_MINUTES = os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES")
 
 
 @strawberry.type
@@ -27,6 +35,12 @@ class User:
         utc_time = self.created_at.astimezone(pytz.utc)
 
         return utc_time.isoformat().replace("+00:00", "Z")
+
+
+@strawberry.type
+class Token:
+    access_token: str
+    token_type: str
 
 
 async def map_user(found_user) -> User:
@@ -62,7 +76,7 @@ class Query:
 class Mutation:
     @strawberry.mutation(graphql_type=User, description="Create a new user")
     async def create_user(
-        self, username: str, email: str, password: str, password_confirm: str, info
+        self, info, username: str, email: str, password: str, password_confirm: str
     ) -> User:
         db = info.context["db"]
         user_serializer = UserCreate(
@@ -73,6 +87,26 @@ class Mutation:
         )
         new_user = await create_user(user_serializer=user_serializer, db=db)
         return await map_user(new_user)
+
+    @strawberry.mutation(graphql_type=Token, description="login for access token")
+    async def login_for_access_token(self, info, username: str, password: str) -> Token:
+        db = info.context["db"]
+        user = await authenticate_user(db=db, username=username, password=password)
+        if not user:
+            raise HTTPException(
+                status_code=401,
+                detail="Incorrect username or password",
+                headers={"WWW-Authenticate": "Bearer"},
+            )
+        access_token_expires = timedelta(minutes=float(ACCESS_TOKEN_EXPIRE_MINUTES))
+        access_token = create_access_token(
+            data={"sub": user.username}, expires_delta=access_token_expires
+        )
+        return Token(access_token=access_token, token_type="bearer")
+
+    async def get_current_user(self, info) -> User:
+        db = info.context["db"]
+
 
 
 schema = strawberry.Schema(query=Query, mutation=Mutation)

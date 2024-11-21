@@ -12,3 +12,23 @@ class UserCreate(BaseModel):
         if values["password"] != values["password_confirm"]:
             raise ValueError("Passwords do not match")
         return values
+
+
+class Token(BaseModel):
+    access_token: str
+    token_type: str
+
+
+class TokenData(BaseModel):
+    username: str | None = None
+
+
+class User(BaseModel):
+    username: str
+    email: str | None = None
+    disabled: bool | None = None
+
+
+class LoginInput(BaseModel):
+    username: str
+    password: str
