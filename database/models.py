@@ -1,7 +1,6 @@
-import datetime
+from datetime import datetime
 
-import pytz
-from sqlalchemy import Column, Integer, String, func, DateTime, Boolean
+from sqlalchemy import Column, Integer, String, DateTime, Boolean
 from sqlalchemy.dialects.postgresql import ENUM
 
 from database.engine import Base
@@ -28,10 +27,12 @@ class DBUser(Base):
     username = Column(String, nullable=False, unique=True)
     password = Column(String, nullable=False)
     email = Column(String, nullable=False, unique=True)
-    profile_picture = Column(String, nullable=False)
+    profile_picture = Column(String, nullable=False, default="default.jpg")
     role = Column(ENUM(Role), nullable=False, default=Role.user)
-    phone_number = Column(String, nullable=False)
+    phone_number = Column(String, nullable=True)
     is_verified = Column(Boolean, nullable=False, default=False)
     created_at = Column(
-        DateTime, default=datetime.datetime.now(tz=pytz.timezone("UTC"))
+        DateTime,
+        default=lambda: datetime.utcnow(),  # Use UTC and make it offset-naive
+        nullable=False,
     )
