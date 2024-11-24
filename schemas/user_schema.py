@@ -6,7 +6,13 @@ import strawberry
 from fastapi import HTTPException
 
 from serializers.user_serializer import UserCreate, Token, LoginInput
-from services.user_service import get_all_users, get_user_by_id, create_user, authenticate_user, create_access_token
+from services.user_service import (
+    get_all_users,
+    get_user_by_id,
+    create_user,
+    authenticate_user,
+    create_access_token,
+)
 from dotenv import load_dotenv
 
 
@@ -106,7 +112,6 @@ class Mutation:
 
     async def get_current_user(self, info) -> User:
         db = info.context["db"]
-
 
 
 schema = strawberry.Schema(query=Query, mutation=Mutation)

@@ -35,13 +35,14 @@ async def create_access_token(data: dict, expires_delta: timedelta | None = None
 
 async def get_user_by_username(db: AsyncSession, username: str):
     query = await db.execute(
-        select(models.DBUser)
-        .filter(models.DBUser.username == username)
+        select(models.DBUser).filter(models.DBUser.username == username)
     )
     return query.scalars().first()
 
 
-async def get_current_user(token: Annotated[str, Depends(oauth2_scheme)], db: AsyncSession):
+async def get_current_user(
+    token: Annotated[str, Depends(oauth2_scheme)], db: AsyncSession
+):
     credentials_exception = HTTPException(
         status_code=401,
         detail="Could not validate credentials",
@@ -149,5 +150,3 @@ async def create_user(user_serializer: UserCreate, db: AsyncSession):
             status_code=500,
             detail=f"An error occurred while creating the user: {str(exc)}",
         )
-
-
