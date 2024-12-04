@@ -1,11 +1,11 @@
-from fastapi import Depends, APIRouter, Response
+from fastapi import Depends, APIRouter, Response, Request
 from fastapi.responses import JSONResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from dependencies.get_db import get_db
 from schemas.user_schema import schema
 from serializers import user_serializer
-from services.user_service import get_all_users, register_view, login_view  # Import your user service
+from services.user_service import get_all_users, register_view, login_view, refresh_view  # Import your user service
 
 
 router = APIRouter()
@@ -36,3 +36,8 @@ async def register(register_serializer: user_serializer.UserCreate, db: AsyncSes
 @router.post("/login", response_model=user_serializer.Token)
 async def login(response: Response, login_serializer: user_serializer.LoginInput, db: AsyncSession = Depends(get_db)):
     return await login_view(response=response, login_serializer=login_serializer, db=db)
+
+
+@router.post("/refresh")
+async def refresh(request: Request, response: Response):
+    return await refresh_view(request=request, response=response)

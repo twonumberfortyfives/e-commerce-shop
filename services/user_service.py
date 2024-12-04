@@ -2,7 +2,7 @@ import os
 from datetime import datetime, timezone, timedelta
 from typing import Annotated
 
-from fastapi import HTTPException, Depends, Response
+from fastapi import HTTPException, Depends, Response, Request
 from fastapi.security import OAuth2PasswordBearer
 from jwt import InvalidTokenError
 from passlib.context import CryptContext
@@ -74,12 +74,12 @@ async def get_current_active_user(
 async def login_view(response: Response, login_serializer: LoginInput, db: AsyncSession):
     user = await get_user_by_username(db, login_serializer.username)
     if user:
-        access_token_expires = timedelta(minutes=float(ACCESS_TOKEN_EXPIRE_MINUTES))
         access_token = await create_access_token(
-            data={"sub": user.username}, expires_delta=access_token_expires
+            data={"sub": user.username},
+            expires_delta=timedelta(minutes=float(ACCESS_TOKEN_EXPIRE_MINUTES))
         )
         refresh_token = await create_refresh_token(
-            data={"sub": user.email},
+            data={"sub": user.username},
             expires_delta=timedelta(minutes=float(REFRESH_TOKEN_EXPIRE_MINUTES))
         )
         response.set_cookie(
@@ -98,6 +98,33 @@ async def login_view(response: Response, login_serializer: LoginInput, db: Async
         status_code=400,
         detail="Incorrect username or password",
     )
+
+
+async def refresh_view(request: Request, response: Response):
+    refresh_token = request.cookies.get("refresh_token")
+    payload = jwt.decode(jwt=refresh_token, key=SECRET_KEY, algorithms=ALGORITHM)
+    username = payload.get("sub")
+    if username:
+        access_token = await create_access_token(
+            data={"sub": username},
+            expires_delta=timedelta(minutes=float(ACCESS_TOKEN_EXPIRE_MINUTES))
+        )
+        refresh_token = await create_refresh_token(
+            data={"sub": username},
+            expires_delta=timedelta(minutes=float(REFRESH_TOKEN_EXPIRE_MINUTES))
+        )
+        response.set_cookie(
+            key="refresh_token",
+            value=refresh_token,
+            httponly=True,
+            secure=True,
+            samesite="none",
+        )
+        access_token = {
+            "access_token": access_token,
+            "token_type": "bearer",
+        }
+        return access_token
 
 
 async def get_all_users(db: AsyncSession):
