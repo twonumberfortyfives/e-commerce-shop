@@ -78,24 +78,24 @@ class Query:
         return await map_user(found_user)
 
 
-@strawberry.type
-class Mutation:
+# @strawberry.type
+# class Mutation:
+#
+#     @strawberry.mutation(graphql_type=Token, description="login for access token")
+#     async def login_for_access_token(self, info, username: str, password: str) -> Token:
+#         db = info.context["db"]
+#         user = await login_view(db=db, username=username, password=password)
+#         if not user:
+#             raise HTTPException(
+#                 status_code=401,
+#                 detail="Incorrect username or password",
+#                 headers={"WWW-Authenticate": "Bearer"},
+#             )
+#         access_token_expires = timedelta(minutes=float(ACCESS_TOKEN_EXPIRE_MINUTES))
+#         access_token = create_access_token(
+#             data={"sub": user.username}, expires_delta=access_token_expires
+#         )
+#         return Token(access_token=access_token, token_type="bearer")
 
-    @strawberry.mutation(graphql_type=Token, description="login for access token")
-    async def login_for_access_token(self, info, username: str, password: str) -> Token:
-        db = info.context["db"]
-        user = await login_view(db=db, username=username, password=password)
-        if not user:
-            raise HTTPException(
-                status_code=401,
-                detail="Incorrect username or password",
-                headers={"WWW-Authenticate": "Bearer"},
-            )
-        access_token_expires = timedelta(minutes=float(ACCESS_TOKEN_EXPIRE_MINUTES))
-        access_token = create_access_token(
-            data={"sub": user.username}, expires_delta=access_token_expires
-        )
-        return Token(access_token=access_token, token_type="bearer")
 
-
-schema = strawberry.Schema(query=Query, mutation=Mutation)
+schema = strawberry.Schema(query=Query)  # u can add mutation by mutation=
