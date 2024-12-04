@@ -9,7 +9,7 @@ from passlib.context import CryptContext
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from database import models
-from serializers.user_serializer import UserCreate, TokenData, User
+from serializers.user_serializer import UserCreate, TokenData, User, LoginInput
 import jwt
 
 
@@ -70,13 +70,22 @@ async def get_current_active_user(
     return current_user
 
 
-async def authenticate_user(db: AsyncSession, username: str, password: str):
-    user = await get_user_by_username(db, username)
-    if not user:
-        return False
-    if not verify_password(password, user.password):
-        return False
-    return user
+async def login_view(login_serializer: LoginInput, db: AsyncSession):
+    user = await get_user_by_username(db, login_serializer.username)
+    if user:
+        access_token_expires = timedelta(minutes=float(ACCESS_TOKEN_EXPIRE_MINUTES))
+        access_token = create_access_token(
+            data={"sub": user.username}, expires_delta=access_token_expires
+        )
+        access_token = {
+            "access_token": access_token,
+            "token_type": "bearer",
+        }
+        return access_token
+    raise HTTPException(
+        status_code=400,
+        detail="Incorrect username or password",
+    )
 
 
 async def get_all_users(db: AsyncSession):
@@ -117,14 +126,14 @@ async def verify_password(plain_password: str, hashed_password: str) -> bool:
     return pwd_context.verify(plain_password, hashed_password)
 
 
-async def create_user(user_serializer: UserCreate, db: AsyncSession):
+async def register_view(register_serializer: UserCreate, db: AsyncSession):
     try:
         user_email_match = await db.execute(
-            select(models.DBUser).filter(models.DBUser.email == user_serializer.email)
+            select(models.DBUser).filter(models.DBUser.email == register_serializer.email)
         )
         user_username_match = await db.execute(
             select(models.DBUser).filter(
-                models.DBUser.username == user_serializer.username
+                models.DBUser.username == register_serializer.username
             )
         )
 
@@ -134,9 +143,9 @@ async def create_user(user_serializer: UserCreate, db: AsyncSession):
             raise HTTPException(status_code=400, detail="Username already registered")
 
         new_user = models.DBUser(
-            username=user_serializer.username,
-            email=user_serializer.email,
-            password=await hash_password(user_serializer.password),
+            username=register_serializer.username,
+            email=register_serializer.email,
+            password=await hash_password(register_serializer.password),
         )
         db.add(new_user)
         await db.commit()

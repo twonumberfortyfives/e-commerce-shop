@@ -9,8 +9,8 @@ from serializers.user_serializer import UserCreate, Token, LoginInput
 from services.user_service import (
     get_all_users,
     get_user_by_id,
-    create_user,
-    authenticate_user,
+    register_view,
+    login_view,
     create_access_token,
 )
 from dotenv import load_dotenv
@@ -80,24 +80,11 @@ class Query:
 
 @strawberry.type
 class Mutation:
-    @strawberry.mutation(graphql_type=User, description="Create a new user")
-    async def create_user(
-        self, info, username: str, email: str, password: str, password_confirm: str
-    ) -> User:
-        db = info.context["db"]
-        user_serializer = UserCreate(
-            username=username,
-            email=email,
-            password=password,
-            password_confirm=password_confirm,
-        )
-        new_user = await create_user(user_serializer=user_serializer, db=db)
-        return await map_user(new_user)
 
     @strawberry.mutation(graphql_type=Token, description="login for access token")
     async def login_for_access_token(self, info, username: str, password: str) -> Token:
         db = info.context["db"]
-        user = await authenticate_user(db=db, username=username, password=password)
+        user = await login_view(db=db, username=username, password=password)
         if not user:
             raise HTTPException(
                 status_code=401,
@@ -109,9 +96,6 @@ class Mutation:
             data={"sub": user.username}, expires_delta=access_token_expires
         )
         return Token(access_token=access_token, token_type="bearer")
-
-    async def get_current_user(self, info) -> User:
-        db = info.context["db"]
 
 
 schema = strawberry.Schema(query=Query, mutation=Mutation)
