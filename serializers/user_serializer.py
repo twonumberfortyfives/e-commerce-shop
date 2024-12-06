@@ -32,3 +32,7 @@ class User(BaseModel):
 class LoginInput(BaseModel):
     username: str
     password: str
+
+
+class Logout(BaseModel):
+    message: str

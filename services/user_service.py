@@ -100,6 +100,25 @@ async def login_view(response: Response, login_serializer: LoginInput, db: Async
     )
 
 
+async def logout_view(request: Request, response: Response):
+    auth_header = request.headers.get("Authorization")
+    if auth_header:
+        access_token = auth_header[len("Bearer "):]
+        payload = jwt.decode(jwt=access_token, key=SECRET_KEY, algorithms=ALGORITHM)
+        username = payload.get("sub")
+        if username:
+            response.delete_cookie("refresh_token")
+            return {"message": "Successfully logged out"}
+        raise HTTPException(
+            status_code=400,
+            detail="error has been occurred"
+        )
+    raise HTTPException(
+        status_code=401,
+        detail="Could not validate credentials",
+    )
+
+
 async def refresh_view(request: Request, response: Response):
     refresh_token = request.cookies.get("refresh_token")
     payload = jwt.decode(jwt=refresh_token, key=SECRET_KEY, algorithms=ALGORITHM)
@@ -125,6 +144,10 @@ async def refresh_view(request: Request, response: Response):
             "token_type": "bearer",
         }
         return access_token
+    raise HTTPException(
+        status_code=400,
+        detail="Invalid refresh token",
+    )
 
 
 async def get_all_users(db: AsyncSession):
