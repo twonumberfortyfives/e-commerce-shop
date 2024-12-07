@@ -120,6 +120,12 @@ async def logout_view(request: Request, response: Response):
 
 
 async def refresh_view(request: Request, response: Response):
+    auth_header = request.headers.get("Authorization")
+    if auth_header:
+        access_token = auth_header[len("Bearer "):]
+        payload = jwt.decode(jwt=access_token, key=SECRET_KEY, algorithms=ALGORITHM)
+
+
     refresh_token = request.cookies.get("refresh_token")
     payload = jwt.decode(jwt=refresh_token, key=SECRET_KEY, algorithms=ALGORITHM)
     username = payload.get("sub")
