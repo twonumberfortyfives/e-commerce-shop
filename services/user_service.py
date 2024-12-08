@@ -42,7 +42,7 @@ async def get_user_by_username(db: AsyncSession, username: str):
 
 
 async def get_current_user(
-        token: Annotated[str, Depends(oauth2_scheme)], db: AsyncSession
+    token: Annotated[str, Depends(oauth2_scheme)], db: AsyncSession
 ):
     credentials_exception = HTTPException(
         status_code=401,
@@ -64,23 +64,25 @@ async def get_current_user(
 
 
 async def get_current_active_user(
-        current_user: Annotated[User, Depends(get_current_user)],
+    current_user: Annotated[User, Depends(get_current_user)],
 ):
     if current_user.disabled:
         raise HTTPException(status_code=400, detail="Inactive user")
     return current_user
 
 
-async def login_view(response: Response, login_serializer: LoginInput, db: AsyncSession):
+async def login_view(
+    response: Response, login_serializer: LoginInput, db: AsyncSession
+):
     user = await get_user_by_username(db, login_serializer.username)
     if user:
         access_token = await create_access_token(
             data={"sub": user.username},
-            expires_delta=timedelta(minutes=float(ACCESS_TOKEN_EXPIRE_MINUTES))
+            expires_delta=timedelta(minutes=float(ACCESS_TOKEN_EXPIRE_MINUTES)),
         )
         refresh_token = await create_refresh_token(
             data={"sub": user.username},
-            expires_delta=timedelta(minutes=float(REFRESH_TOKEN_EXPIRE_MINUTES))
+            expires_delta=timedelta(minutes=float(REFRESH_TOKEN_EXPIRE_MINUTES)),
         )
         response.set_cookie(
             key="refresh_token",
@@ -103,16 +105,13 @@ async def login_view(response: Response, login_serializer: LoginInput, db: Async
 async def logout_view(request: Request, response: Response):
     auth_header = request.headers.get("Authorization")
     if auth_header:
-        access_token = auth_header[len("Bearer "):]
+        access_token = auth_header[len("Bearer ") :]
         payload = jwt.decode(jwt=access_token, key=SECRET_KEY, algorithms=ALGORITHM)
         username = payload.get("sub")
         if username:
             response.delete_cookie("refresh_token")
             return {"message": "Successfully logged out"}
-        raise HTTPException(
-            status_code=400,
-            detail="error has been occurred"
-        )
+        raise HTTPException(status_code=400, detail="error has been occurred")
     raise HTTPException(
         status_code=401,
         detail="Could not validate credentials",
@@ -122,9 +121,8 @@ async def logout_view(request: Request, response: Response):
 async def refresh_view(request: Request, response: Response):
     auth_header = request.headers.get("Authorization")
     if auth_header:
-        access_token = auth_header[len("Bearer "):]
+        access_token = auth_header[len("Bearer ") :]
         payload = jwt.decode(jwt=access_token, key=SECRET_KEY, algorithms=ALGORITHM)
-
 
     refresh_token = request.cookies.get("refresh_token")
     payload = jwt.decode(jwt=refresh_token, key=SECRET_KEY, algorithms=ALGORITHM)
@@ -132,11 +130,11 @@ async def refresh_view(request: Request, response: Response):
     if username:
         access_token = await create_access_token(
             data={"sub": username},
-            expires_delta=timedelta(minutes=float(ACCESS_TOKEN_EXPIRE_MINUTES))
+            expires_delta=timedelta(minutes=float(ACCESS_TOKEN_EXPIRE_MINUTES)),
         )
         refresh_token = await create_refresh_token(
             data={"sub": username},
-            expires_delta=timedelta(minutes=float(REFRESH_TOKEN_EXPIRE_MINUTES))
+            expires_delta=timedelta(minutes=float(REFRESH_TOKEN_EXPIRE_MINUTES)),
         )
         response.set_cookie(
             key="refresh_token",
@@ -197,7 +195,9 @@ async def verify_password(plain_password: str, hashed_password: str) -> bool:
 async def register_view(register_serializer: UserCreate, db: AsyncSession):
     try:
         user_email_match = await db.execute(
-            select(models.DBUser).filter(models.DBUser.email == register_serializer.email)
+            select(models.DBUser).filter(
+                models.DBUser.email == register_serializer.email
+            )
         )
         user_username_match = await db.execute(
             select(models.DBUser).filter(

@@ -36,4 +36,3 @@ class DBUser(Base):
         default=lambda: datetime.utcnow(),  # Use UTC and make it offset-naive
         nullable=False,
     )
-
