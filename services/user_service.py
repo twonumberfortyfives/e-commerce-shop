@@ -12,6 +12,8 @@ from database import models
 from serializers.user_serializer import UserCreate, TokenData, User, LoginInput
 import jwt
 
+from fastapi_mail import FastMail, MessageSchema, ConnectionConfig
+
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
@@ -20,6 +22,23 @@ SECRET_KEY = os.getenv("SECRET_KEY")
 ALGORITHM = os.getenv("ALGORITHM")
 ACCESS_TOKEN_EXPIRE_MINUTES = os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES")
 REFRESH_TOKEN_EXPIRE_MINUTES = os.getenv("REFRESH_TOKEN_EXPIRE_MINUTES")
+MAIL_USERNAME = os.getenv("MAIL_USERNAME")
+MAIL_PASSWORD = os.getenv("MAIL_PASSWORD")
+MAIL_FROM = os.getenv("MAIL_FROM")
+MAIL_PORT = os.getenv("MAIL_PORT")
+MAIL_SERVER = os.getenv("MAIL_SERVER")
+
+conf = ConnectionConfig(
+    MAIL_USERNAME=MAIL_USERNAME,
+    MAIL_PASSWORD=MAIL_PASSWORD,
+    MAIL_FROM=MAIL_FROM,
+    MAIL_PORT=MAIL_PORT,
+    MAIL_SERVER="smtp.gmail.com",
+    MAIL_STARTTLS=True,
+    MAIL_SSL_TLS=False,
+    USE_CREDENTIALS=True,
+    VALIDATE_CERTS=True,
+)
 
 
 async def create_access_token(data: dict, expires_delta: timedelta):
@@ -34,6 +53,40 @@ async def create_refresh_token(data: dict, expires_delta: timedelta):
     return jwt.encode(payload=data, key=SECRET_KEY, algorithm=ALGORITHM)
 
 
+async def create_verification_token(email: str):
+    expire = datetime.now(timezone.utc) + timedelta(hours=1)
+    payload = {"email": email, "exp": expire}
+    return jwt.encode(payload=payload, key=SECRET_KEY, algorithm=ALGORITHM)
+
+
+async def send_verification_email(email: str):
+    token = await create_verification_token(email=email)
+    verification_link = f"http://localhost:8000/api/v1/verify?token={token}"
+    message = MessageSchema(
+        subject="Verification email",
+        recipients=[email],
+        body=f"Verification link: {verification_link}",
+        subtype="plain",
+    )
+    fm = FastMail(conf)
+    await fm.send_message(message)
+
+
+async def verify_email_view(token: str, db: AsyncSession):
+    try:
+        payload = jwt.decode(jwt=token, key=SECRET_KEY, algorithms=ALGORITHM)
+        email = payload.get("email")
+        user = await get_user_by_email(email=email, db=db)
+        if user.is_verified:
+            raise HTTPException(status_code=400, detail="User already verified")
+        user.is_verified = True
+        await db.commit()
+        await db.refresh(user)
+        return {"message": "Email verified successfully"}
+    except jwt.ExpiredSignatureError:
+        raise HTTPException(status_code=401, detail="An error has been occurred.")
+
+
 async def get_user_by_username(db: AsyncSession, username: str):
     query = await db.execute(
         select(models.DBUser).filter(models.DBUser.username == username)
@@ -41,38 +94,15 @@ async def get_user_by_username(db: AsyncSession, username: str):
     return query.scalars().first()
 
 
-async def get_current_user(
-    token: Annotated[str, Depends(oauth2_scheme)], db: AsyncSession
-):
-    credentials_exception = HTTPException(
-        status_code=401,
-        detail="Could not validate credentials",
-        headers={"WWW-Authenticate": "Bearer"},
+async def get_user_by_email(db: AsyncSession, email: str):
+    query = await db.execute(
+        select(models.DBUser).filter(models.DBUser.email == email)
     )
-    try:
-        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
-        username: str = payload.get("sub")
-        if username is None:
-            raise credentials_exception
-        token_data = TokenData(username=username)
-    except InvalidTokenError:
-        raise credentials_exception
-    user = await get_user_by_username(username=token_data.username, db=db)
-    if user is None:
-        raise credentials_exception
-    return user
-
-
-async def get_current_active_user(
-    current_user: Annotated[User, Depends(get_current_user)],
-):
-    if current_user.disabled:
-        raise HTTPException(status_code=400, detail="Inactive user")
-    return current_user
+    return query.scalars().first()
 
 
 async def login_view(
-    response: Response, login_serializer: LoginInput, db: AsyncSession
+        response: Response, login_serializer: LoginInput, db: AsyncSession
 ):
     user = await get_user_by_username(db, login_serializer.username)
     if user:
@@ -103,55 +133,60 @@ async def login_view(
 
 
 async def logout_view(request: Request, response: Response):
-    auth_header = request.headers.get("Authorization")
-    if auth_header:
-        access_token = auth_header[len("Bearer ") :]
-        payload = jwt.decode(jwt=access_token, key=SECRET_KEY, algorithms=ALGORITHM)
-        username = payload.get("sub")
-        if username:
-            response.delete_cookie("refresh_token")
-            return {"message": "Successfully logged out"}
-        raise HTTPException(status_code=400, detail="error has been occurred")
-    raise HTTPException(
-        status_code=401,
-        detail="Could not validate credentials",
-    )
+    access_token = await refresh_view(request=request, response=response)
+    if access_token:
+        response.delete_cookie("refresh_token")
+        return {"message": "Successfully logged out!"}
+    raise HTTPException(status_code=401, detail="Error has been occurred while logging out")
 
 
 async def refresh_view(request: Request, response: Response):
     auth_header = request.headers.get("Authorization")
     if auth_header:
-        access_token = auth_header[len("Bearer ") :]
-        payload = jwt.decode(jwt=access_token, key=SECRET_KEY, algorithms=ALGORITHM)
+        access_token = auth_header[len("Bearer "):]
+        try:
+            payload = jwt.decode(jwt=access_token, key=SECRET_KEY, algorithms=ALGORITHM)
+            access_token = {
+                "access_token": payload,
+                "token_type": "bearer",
+            }
+            return access_token
+        except jwt.ExpiredSignatureError:
+            pass
+        except jwt.DecodeError:
+            raise HTTPException(status_code=400, detail="Invalid token")
 
     refresh_token = request.cookies.get("refresh_token")
-    payload = jwt.decode(jwt=refresh_token, key=SECRET_KEY, algorithms=ALGORITHM)
-    username = payload.get("sub")
-    if username:
-        access_token = await create_access_token(
+    if not refresh_token:
+        raise HTTPException(status_code=401, detail="Refresh token missing")
+    try:
+        payload = jwt.decode(jwt=refresh_token, key=SECRET_KEY, algorithms=ALGORITHM)
+        username = payload.get("sub")
+
+        new_access_token = await create_access_token(
             data={"sub": username},
             expires_delta=timedelta(minutes=float(ACCESS_TOKEN_EXPIRE_MINUTES)),
         )
-        refresh_token = await create_refresh_token(
+        new_refresh_token = await create_refresh_token(
             data={"sub": username},
             expires_delta=timedelta(minutes=float(REFRESH_TOKEN_EXPIRE_MINUTES)),
         )
         response.set_cookie(
             key="refresh_token",
-            value=refresh_token,
+            value=new_refresh_token,
             httponly=True,
             secure=True,
             samesite="none",
         )
         access_token = {
-            "access_token": access_token,
+            "access_token": new_access_token,
             "token_type": "bearer",
         }
         return access_token
-    raise HTTPException(
-        status_code=400,
-        detail="Invalid refresh token",
-    )
+    except jwt.ExpiredSignatureError:
+        raise HTTPException(status_code=401, detail="Refresh token expired")
+    except jwt.DecodeError:
+        raise HTTPException(status_code=401, detail="Invalid refresh token")
 
 
 async def get_all_users(db: AsyncSession):
@@ -210,6 +245,7 @@ async def register_view(register_serializer: UserCreate, db: AsyncSession):
         if user_username_match.scalars().first():
             raise HTTPException(status_code=400, detail="Username already registered")
 
+        # Create new user
         new_user = models.DBUser(
             username=register_serializer.username,
             email=register_serializer.email,
@@ -218,11 +254,13 @@ async def register_view(register_serializer: UserCreate, db: AsyncSession):
         db.add(new_user)
         await db.commit()
         await db.refresh(new_user)
+        await send_verification_email(email=new_user.email)
         return new_user
 
     except HTTPException as http_exc:
         raise http_exc
     except Exception as exc:
+        await db.rollback()  # Rollback the transaction on other errors
         raise HTTPException(
             status_code=500,
             detail=f"An error occurred while creating the user: {str(exc)}",

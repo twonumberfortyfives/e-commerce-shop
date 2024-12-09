@@ -10,7 +10,7 @@ from services.user_service import (
     register_view,
     login_view,
     refresh_view,
-    logout_view,
+    logout_view, verify_email_view,
 )  # Import your user service
 
 
@@ -58,3 +58,8 @@ async def logout(request: Request, response: Response):
 @router.post("/refresh")
 async def refresh(request: Request, response: Response):
     return await refresh_view(request=request, response=response)
+
+
+@router.get("/verify", response_model=user_serializer.EmailVerification)
+async def verify_email(token: str, db: AsyncSession = Depends(get_db)):
+    return await verify_email_view(token=token, db=db)

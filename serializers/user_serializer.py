@@ -36,3 +36,7 @@ class LoginInput(BaseModel):
 
 class Logout(BaseModel):
     message: str
+
+
+class EmailVerification(BaseModel):
+    message: str
