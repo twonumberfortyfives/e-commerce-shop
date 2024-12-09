@@ -10,31 +10,34 @@ from services.user_service import (
     register_view,
     login_view,
     refresh_view,
-    logout_view, verify_email_view,
+    logout_view,
+    verify_email_view,
+    my_profile_view,
 )  # Import your user service
 
 
 router = APIRouter()
 
 
-@router.get("/users")
-async def fetch_users(db: AsyncSession = Depends(get_db)):
-    query = """
-        query {
-          getAllUsers {
-            username
-            email
-          }
-        }
-    """
+# @router.get("/users")
+# async def fetch_users(db: AsyncSession = Depends(get_db)):
+#     query = """
+#         query {
+#           getAllUsers {
+#             username
+#             email
+#           }
+#         }
+#     """
+#
+#     result = await schema.execute(
+#         query, context_value={"db": db}
+#     )  # Pass the session to the query
+#     return JSONResponse(content=result.data)
+#
 
-    result = await schema.execute(
-        query, context_value={"db": db}
-    )  # Pass the session to the query
-    return JSONResponse(content=result.data)
 
-
-@router.post("/register")
+@router.post("/register", response_model=user_serializer.UserCreateOutput)
 async def register(
     register_serializer: user_serializer.UserCreate, db: AsyncSession = Depends(get_db)
 ):
@@ -63,3 +66,10 @@ async def refresh(request: Request, response: Response):
 @router.get("/verify", response_model=user_serializer.EmailVerification)
 async def verify_email(token: str, db: AsyncSession = Depends(get_db)):
     return await verify_email_view(token=token, db=db)
+
+
+@router.get("/my-profile", response_model=user_serializer.MyProfile)
+async def my_profile(
+    request: Request, response: Response, db: AsyncSession = Depends(get_db)
+):
+    return await my_profile_view(request=request, response=response, db=db)

@@ -1,15 +1,14 @@
 import os
 from datetime import datetime, timezone, timedelta
-from typing import Annotated
+from typing import Sequence, Any
 
-from fastapi import HTTPException, Depends, Response, Request
+from fastapi import HTTPException, Response, Request
 from fastapi.security import OAuth2PasswordBearer
-from jwt import InvalidTokenError
 from passlib.context import CryptContext
-from sqlalchemy import select
+from sqlalchemy import select, Row, RowMapping
 from sqlalchemy.ext.asyncio import AsyncSession
 from database import models
-from serializers.user_serializer import UserCreate, TokenData, User, LoginInput
+from serializers.user_serializer import UserCreate, LoginInput
 import jwt
 
 from fastapi_mail import FastMail, MessageSchema, ConnectionConfig
@@ -41,25 +40,25 @@ conf = ConnectionConfig(
 )
 
 
-async def create_access_token(data: dict, expires_delta: timedelta):
+async def create_access_token(data: dict, expires_delta: timedelta) -> str:
     expire = datetime.now(timezone.utc) + expires_delta
     data.update({"exp": expire})
     return jwt.encode(payload=data, key=SECRET_KEY, algorithm=ALGORITHM)
 
 
-async def create_refresh_token(data: dict, expires_delta: timedelta):
+async def create_refresh_token(data: dict, expires_delta: timedelta) -> str:
     expire = datetime.now(timezone.utc) + expires_delta
     data.update({"exp": expire})
     return jwt.encode(payload=data, key=SECRET_KEY, algorithm=ALGORITHM)
 
 
-async def create_verification_token(email: str):
+async def create_verification_token(email: str) -> str:
     expire = datetime.now(timezone.utc) + timedelta(hours=1)
     payload = {"email": email, "exp": expire}
     return jwt.encode(payload=payload, key=SECRET_KEY, algorithm=ALGORITHM)
 
 
-async def send_verification_email(email: str):
+async def send_verification_email(email: str) -> None:
     token = await create_verification_token(email=email)
     verification_link = f"http://localhost:8000/api/v1/verify?token={token}"
     message = MessageSchema(
@@ -72,7 +71,7 @@ async def send_verification_email(email: str):
     await fm.send_message(message)
 
 
-async def verify_email_view(token: str, db: AsyncSession):
+async def verify_email_view(token: str, db: AsyncSession) -> dict:
     try:
         payload = jwt.decode(jwt=token, key=SECRET_KEY, algorithms=ALGORITHM)
         email = payload.get("email")
@@ -83,27 +82,25 @@ async def verify_email_view(token: str, db: AsyncSession):
         await db.commit()
         await db.refresh(user)
         return {"message": "Email verified successfully"}
-    except jwt.ExpiredSignatureError:
+    except jwt.exceptions.ExpiredSignatureError:
         raise HTTPException(status_code=401, detail="An error has been occurred.")
 
 
-async def get_user_by_username(db: AsyncSession, username: str):
+async def get_user_by_username(db: AsyncSession, username: str) -> models.DBUser:
     query = await db.execute(
         select(models.DBUser).filter(models.DBUser.username == username)
     )
     return query.scalars().first()
 
 
-async def get_user_by_email(db: AsyncSession, email: str):
-    query = await db.execute(
-        select(models.DBUser).filter(models.DBUser.email == email)
-    )
+async def get_user_by_email(db: AsyncSession, email: str) -> models.DBUser:
+    query = await db.execute(select(models.DBUser).filter(models.DBUser.email == email))
     return query.scalars().first()
 
 
 async def login_view(
-        response: Response, login_serializer: LoginInput, db: AsyncSession
-):
+    response: Response, login_serializer: LoginInput, db: AsyncSession
+) -> dict:
     user = await get_user_by_username(db, login_serializer.username)
     if user:
         access_token = await create_access_token(
@@ -132,15 +129,17 @@ async def login_view(
     )
 
 
-async def logout_view(request: Request, response: Response):
+async def logout_view(request: Request, response: Response) -> dict:
     access_token = await refresh_view(request=request, response=response)
     if access_token:
         response.delete_cookie("refresh_token")
         return {"message": "Successfully logged out!"}
-    raise HTTPException(status_code=401, detail="Error has been occurred while logging out")
+    raise HTTPException(
+        status_code=401, detail="Error has been occurred while logging out"
+    )
 
 
-async def refresh_view(request: Request, response: Response):
+async def refresh_view(request: Request, response: Response) -> dict:
     auth_header = request.headers.get("Authorization")
     if auth_header:
         access_token = auth_header[len("Bearer "):]
@@ -151,9 +150,9 @@ async def refresh_view(request: Request, response: Response):
                 "token_type": "bearer",
             }
             return access_token
-        except jwt.ExpiredSignatureError:
+        except jwt.exceptions.ExpiredSignatureError:
             pass
-        except jwt.DecodeError:
+        except jwt.exceptions.DecodeError:
             raise HTTPException(status_code=400, detail="Invalid token")
 
     refresh_token = request.cookies.get("refresh_token")
@@ -183,13 +182,13 @@ async def refresh_view(request: Request, response: Response):
             "token_type": "bearer",
         }
         return access_token
-    except jwt.ExpiredSignatureError:
+    except jwt.exceptions.ExpiredSignatureError:
         raise HTTPException(status_code=401, detail="Refresh token expired")
-    except jwt.DecodeError:
+    except jwt.exceptions.DecodeError:
         raise HTTPException(status_code=401, detail="Invalid refresh token")
 
 
-async def get_all_users(db: AsyncSession):
+async def get_all_users(db: AsyncSession) -> Sequence[models.DBUser]:
     try:
         query = await db.execute(select(models.DBUser))
         all_users = query.scalars().all()
@@ -203,7 +202,7 @@ async def get_all_users(db: AsyncSession):
         )
 
 
-async def get_user_by_id(db: AsyncSession, user_id: int):
+async def get_user_by_id(db: AsyncSession, user_id: int) -> Row[Any] | RowMapping:
     try:
         query = await db.execute(
             select(models.DBUser).filter(models.DBUser.id == user_id)
@@ -227,7 +226,9 @@ async def verify_password(plain_password: str, hashed_password: str) -> bool:
     return pwd_context.verify(plain_password, hashed_password)
 
 
-async def register_view(register_serializer: UserCreate, db: AsyncSession):
+async def register_view(
+    register_serializer: UserCreate, db: AsyncSession
+) -> models.DBUser:
     try:
         user_email_match = await db.execute(
             select(models.DBUser).filter(
@@ -265,3 +266,20 @@ async def register_view(register_serializer: UserCreate, db: AsyncSession):
             status_code=500,
             detail=f"An error occurred while creating the user: {str(exc)}",
         )
+
+
+async def get_current_user(
+    request: Request, response: Response, db: AsyncSession
+) -> models.DBUser:
+    access_token = (await refresh_view(request=request, response=response)).get(
+        "access_token"
+    )
+    payload = jwt.decode(jwt=access_token, key=SECRET_KEY, algorithms=ALGORITHM)
+    user_username = payload.get("sub")
+    return await get_user_by_username(username=user_username, db=db)
+
+
+async def my_profile_view(
+    request: Request, response: Response, db: AsyncSession
+) -> models.DBUser:
+    return await get_current_user(request=request, response=response, db=db)

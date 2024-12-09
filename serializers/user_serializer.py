@@ -1,4 +1,4 @@
-from pydantic import BaseModel, Field, model_validator, EmailStr, validator
+from pydantic import BaseModel, Field, model_validator, EmailStr
 
 
 class UserCreate(BaseModel):
@@ -14,13 +14,15 @@ class UserCreate(BaseModel):
         return values
 
 
+class UserCreateOutput(BaseModel):
+    username: str
+    email: str
+    profile_picture: str
+
+
 class Token(BaseModel):
     access_token: str
     token_type: str
-
-
-class TokenData(BaseModel):
-    username: str | None = None
 
 
 class User(BaseModel):
@@ -40,3 +42,10 @@ class Logout(BaseModel):
 
 class EmailVerification(BaseModel):
     message: str
+
+
+class MyProfile(BaseModel):
+    username: str
+    email: str
+    profile_picture: str
+    phone_number: str | None
