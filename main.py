@@ -10,6 +10,7 @@ from sqladmin import Admin
 
 
 app = FastAPI()
+admin = Admin(app, engine)
 
 
 app.include_router(user_router, prefix="/api/v1")
@@ -25,10 +26,6 @@ graphql_app = GraphQLRouter(schema, context_getter=get_context)
 
 # Add the GraphQL endpoint to FastAPI
 app.include_router(graphql_app, prefix="/graphql")
-
-
-# Mount the admin panel
-admin = Admin(app, engine)
 
 
 @app.get("/")
