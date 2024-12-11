@@ -1,12 +1,12 @@
 from fastapi import FastAPI, Depends
 from strawberry.fastapi import GraphQLRouter
 
-from admin.models import init_fastapi_admin
 from api.v1.user import router as user_router
+from database.engine import engine
 from dependencies.get_db import get_db
 from schemas.user_schema import schema
 
-from fastapi_admin.app import app as admin_app
+from sqladmin import Admin
 
 
 app = FastAPI()
@@ -27,13 +27,8 @@ graphql_app = GraphQLRouter(schema, context_getter=get_context)
 app.include_router(graphql_app, prefix="/graphql")
 
 
-@app.on_event("startup")
-async def on_startup():
-    await init_fastapi_admin()
-
-
 # Mount the admin panel
-app.mount("/admin", admin_app)
+admin = Admin(app, engine)
 
 
 @app.get("/")
