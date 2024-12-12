@@ -1,4 +1,4 @@
-from fastapi import Depends, APIRouter, Response, Request
+from fastapi import Depends, APIRouter, Response, Request, UploadFile
 from fastapi.responses import JSONResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -12,7 +12,7 @@ from services.user_service import (
     refresh_view,
     logout_view,
     verify_email_view,
-    my_profile_view,
+    my_profile_view, edit_my_profile_view,
 )  # Import your user service
 
 
@@ -73,3 +73,15 @@ async def my_profile(
     request: Request, response: Response, db: AsyncSession = Depends(get_db)
 ):
     return await my_profile_view(request=request, response=response, db=db)
+
+
+@router.patch("/my-profile", response_model=user_serializer.MyProfile)
+async def edit_my_profile(
+        username: str,
+        bio: str,
+        profile_picture: UploadFile,
+        request: Request,
+        response: Response,
+        db: AsyncSession = Depends(get_db)
+):
+    return await edit_my_profile_view(username=username, bio=bio, profile_picture=profile_picture, request=request, response=response, db=db)

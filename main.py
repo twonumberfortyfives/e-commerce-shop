@@ -1,4 +1,5 @@
 from fastapi import FastAPI, Depends
+from fastapi.staticfiles import StaticFiles
 from strawberry.fastapi import GraphQLRouter
 
 from api.v1.user import router as user_router
@@ -14,6 +15,8 @@ admin = Admin(app, engine)
 
 
 app.include_router(user_router, prefix="/api/v1")
+
+app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")
 
 
 async def get_context(

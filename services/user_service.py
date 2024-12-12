@@ -1,8 +1,10 @@
 import os
+import uuid
 from datetime import datetime, timezone, timedelta
 from typing import Sequence, Any
+import aiofiles
 
-from fastapi import HTTPException, Response, Request
+from fastapi import HTTPException, Response, Request, UploadFile
 from fastapi.security import OAuth2PasswordBearer
 from passlib.context import CryptContext
 from sqlalchemy import select, Row, RowMapping
@@ -26,6 +28,7 @@ MAIL_PASSWORD = os.getenv("MAIL_PASSWORD")
 MAIL_FROM = os.getenv("MAIL_FROM")
 MAIL_PORT = os.getenv("MAIL_PORT")
 MAIL_SERVER = os.getenv("MAIL_SERVER")
+DOMAIN = os.getenv("DOMAIN")
 
 conf = ConnectionConfig(
     MAIL_USERNAME=MAIL_USERNAME,
@@ -283,3 +286,31 @@ async def my_profile_view(
     request: Request, response: Response, db: AsyncSession
 ) -> models.DBUser:
     return await get_current_user(request=request, response=response, db=db)
+
+
+async def edit_my_profile_view(
+        username: str,
+        bio: str,
+        profile_picture: UploadFile,
+        request: Request,
+        response: Response,
+        db: AsyncSession,
+):
+    current_user = await get_current_user(request=request, response=response, db=db)
+    if username:
+        current_user.username = username
+    if bio:
+        current_user.bio = bio
+    if profile_picture:
+        if profile_picture.content_type not in ["image/jpeg", "image/png"]:
+            raise HTTPException(status_code=400, detail="Invalid image type")
+        os.makedirs("uploads/user_profile_pictures", exist_ok=True)
+        image_path = (
+            f"uploads/user_profile_pictures/{uuid.uuid4()}.{profile_picture.filename}"
+        )
+        async with aiofiles.open(image_path, "wb") as file:
+            await file.write(await profile_picture.read())
+        current_user.profile_picture = f"{DOMAIN}/{image_path}"
+    await db.commit()
+    await db.refresh(current_user)
+    return current_user

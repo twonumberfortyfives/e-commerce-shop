@@ -25,6 +25,7 @@ class DBUser(Base):
         index=True,
     )
     username = Column(String, nullable=False, unique=True)
+    bio = Column(String(length=500), nullable=True)
     password = Column(String, nullable=False)
     email = Column(String, nullable=False, unique=True)
     profile_picture = Column(String, nullable=False, default="default.jpg")

@@ -1,3 +1,5 @@
+from datetime import datetime
+
 from pydantic import BaseModel, Field, model_validator, EmailStr
 
 
@@ -47,5 +49,7 @@ class EmailVerification(BaseModel):
 class MyProfile(BaseModel):
     username: str
     email: str
+    bio: str | None
+    created_at: datetime
     profile_picture: str
     phone_number: str | None
