@@ -107,11 +107,11 @@ async def login_view(
     user = await get_user_by_username(db, login_serializer.username)
     if user:
         access_token = await create_access_token(
-            data={"sub": user.username},
+            data={"sub": user.email},
             expires_delta=timedelta(minutes=float(ACCESS_TOKEN_EXPIRE_MINUTES)),
         )
         refresh_token = await create_refresh_token(
-            data={"sub": user.username},
+            data={"sub": user.email},
             expires_delta=timedelta(minutes=float(REFRESH_TOKEN_EXPIRE_MINUTES)),
         )
         response.set_cookie(
@@ -163,14 +163,14 @@ async def refresh_view(request: Request, response: Response) -> dict:
         raise HTTPException(status_code=401, detail="Refresh token missing")
     try:
         payload = jwt.decode(jwt=refresh_token, key=SECRET_KEY, algorithms=ALGORITHM)
-        username = payload.get("sub")
+        email = payload.get("sub")
 
         new_access_token = await create_access_token(
-            data={"sub": username},
+            data={"sub": email},
             expires_delta=timedelta(minutes=float(ACCESS_TOKEN_EXPIRE_MINUTES)),
         )
         new_refresh_token = await create_refresh_token(
-            data={"sub": username},
+            data={"sub": email},
             expires_delta=timedelta(minutes=float(REFRESH_TOKEN_EXPIRE_MINUTES)),
         )
         response.set_cookie(
@@ -278,8 +278,8 @@ async def get_current_user(
         "access_token"
     )
     payload = jwt.decode(jwt=access_token, key=SECRET_KEY, algorithms=ALGORITHM)
-    user_username = payload.get("sub")
-    return await get_user_by_username(username=user_username, db=db)
+    user_email = payload.get("sub")
+    return await get_user_by_email(email=user_email, db=db)
 
 
 async def my_profile_view(
@@ -289,12 +289,12 @@ async def my_profile_view(
 
 
 async def edit_my_profile_view(
-        username: str,
-        bio: str,
-        profile_picture: UploadFile,
         request: Request,
         response: Response,
         db: AsyncSession,
+        username: str = None,
+        bio: str = None,
+        profile_picture: UploadFile | str = None,
 ):
     current_user = await get_current_user(request=request, response=response, db=db)
     if username:
@@ -306,11 +306,16 @@ async def edit_my_profile_view(
             raise HTTPException(status_code=400, detail="Invalid image type")
         os.makedirs("uploads/user_profile_pictures", exist_ok=True)
         image_path = (
-            f"uploads/user_profile_pictures/{uuid.uuid4()}.{profile_picture.filename}"
+            f"uploads/user_profile_pictures/{uuid.uuid4()}.{profile_picture.filename.replace(" ", "")}"
         )
         async with aiofiles.open(image_path, "wb") as file:
             await file.write(await profile_picture.read())
         current_user.profile_picture = f"{DOMAIN}/{image_path}"
-    await db.commit()
-    await db.refresh(current_user)
-    return current_user
+    try:
+        await db.commit()
+        await db.refresh(current_user)
+        return current_user
+    except Exception as exc:
+        await db.rollback()
+        raise HTTPException(status_code=400, detail=str(exc))
+
