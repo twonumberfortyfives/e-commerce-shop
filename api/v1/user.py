@@ -12,7 +12,8 @@ from services.user_service import (
     refresh_view,
     logout_view,
     verify_email_view,
-    my_profile_view, edit_my_profile_view,
+    my_profile_view,
+    edit_my_profile_view,
 )  # Import your user service
 
 
@@ -77,11 +78,18 @@ async def my_profile(
 
 @router.patch("/my-profile", response_model=user_serializer.MyProfile)
 async def edit_my_profile(
-        request: Request,
-        response: Response,
-        username: str = None,
-        bio: str = None,
-        profile_picture: UploadFile | str = None,
-        db: AsyncSession = Depends(get_db)
+    request: Request,
+    response: Response,
+    username: str = None,
+    bio: str = None,
+    profile_picture: UploadFile | str = None,
+    db: AsyncSession = Depends(get_db),
 ):
-    return await edit_my_profile_view(username=username, bio=bio, profile_picture=profile_picture, request=request, response=response, db=db)
+    return await edit_my_profile_view(
+        username=username,
+        bio=bio,
+        profile_picture=profile_picture,
+        request=request,
+        response=response,
+        db=db,
+    )

@@ -52,7 +52,9 @@ class DBProductImage(Base):
         index=True,
     )
     link = Column(String, nullable=False)
-    product_id = Column(Integer, ForeignKey("products.id", ondelete="CASCADE"), nullable=False)
+    product_id = Column(
+        Integer, ForeignKey("products.id", ondelete="CASCADE"), nullable=False
+    )
     product = relationship("DBProduct", back_populates="images")
 
 
@@ -91,5 +93,7 @@ class DBProduct(Base):
     created_at = Column(DateTime, default=lambda: datetime.utcnow(), nullable=False)
     category_id = Column(Integer, ForeignKey("product_categories.id"), nullable=False)
 
-    images = relationship("DBProductImage", back_populates="product", cascade="all, delete-orphan")
+    images = relationship(
+        "DBProductImage", back_populates="product", cascade="all, delete-orphan"
+    )
     category = relationship("DBProductCategory", back_populates="products")

@@ -145,7 +145,7 @@ async def logout_view(request: Request, response: Response) -> dict:
 async def refresh_view(request: Request, response: Response) -> dict:
     auth_header = request.headers.get("Authorization")
     if auth_header:
-        access_token = auth_header[len("Bearer "):]
+        access_token = auth_header[len("Bearer ") :]
         try:
             payload = jwt.decode(jwt=access_token, key=SECRET_KEY, algorithms=ALGORITHM)
             access_token = {
@@ -289,12 +289,12 @@ async def my_profile_view(
 
 
 async def edit_my_profile_view(
-        request: Request,
-        response: Response,
-        db: AsyncSession,
-        username: str = None,
-        bio: str = None,
-        profile_picture: UploadFile | str = None,
+    request: Request,
+    response: Response,
+    db: AsyncSession,
+    username: str = None,
+    bio: str = None,
+    profile_picture: UploadFile | str = None,
 ):
     current_user = await get_current_user(request=request, response=response, db=db)
     if username:
@@ -305,9 +305,7 @@ async def edit_my_profile_view(
         if profile_picture.content_type not in ["image/jpeg", "image/png"]:
             raise HTTPException(status_code=400, detail="Invalid image type")
         os.makedirs("uploads/user_profile_pictures", exist_ok=True)
-        image_path = (
-            f"uploads/user_profile_pictures/{uuid.uuid4()}.{profile_picture.filename.replace(" ", "")}"
-        )
+        image_path = f"uploads/user_profile_pictures/{uuid.uuid4()}.{profile_picture.filename.replace(" ", "")}"
         async with aiofiles.open(image_path, "wb") as file:
             await file.write(await profile_picture.read())
         current_user.profile_picture = f"{DOMAIN}/{image_path}"
@@ -318,4 +316,3 @@ async def edit_my_profile_view(
     except Exception as exc:
         await db.rollback()
         raise HTTPException(status_code=400, detail=str(exc))
-
