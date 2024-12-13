@@ -3,18 +3,22 @@ from fastapi.staticfiles import StaticFiles
 from strawberry.fastapi import GraphQLRouter
 
 from api.v1.user import router as user_router
+from api.v1.product import router as product_router
 from database.engine import engine
 from dependencies.get_db import get_db
-from schemas.user_schema import schema
+
 
 from sqladmin import Admin
 
+from schemas.schema_rooting import schema
 
 app = FastAPI()
 admin = Admin(app, engine)
 
 
-app.include_router(user_router, prefix="/api/v1")
+app.include_router(user_router, prefix="/api/v1/users")
+app.include_router(product_router, prefix="/api/v1/products")
+
 
 app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")
 
@@ -25,7 +29,8 @@ async def get_context(
     return {"db": db}
 
 
-graphql_app = GraphQLRouter(schema, context_getter=get_context)
+graphql_app = GraphQLRouter(schema=schema, context_getter=get_context)
+
 
 # Add the GraphQL endpoint to FastAPI
 app.include_router(graphql_app, prefix="/graphql")

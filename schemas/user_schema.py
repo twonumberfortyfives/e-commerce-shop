@@ -69,13 +69,13 @@ class Query:
     async def get_all_users(self, info) -> list[User]:
         db = info.context["db"]
         db_users = await get_all_users(db=db)
-        return [await map_user(user) for user in db_users]
+        return [await map_user(found_user=user) for user in db_users]
 
     @strawberry.field(graphql_type=User, description="Get user by id")
     async def get_user_by_id(self, user_id: int, info) -> User:
         db = info.context["db"]
         found_user = await get_user_by_id(db=db, user_id=user_id)
-        return await map_user(found_user)
+        return await map_user(found_user=found_user)
 
 
 # @strawberry.type
@@ -98,4 +98,4 @@ class Query:
 #         return Token(access_token=access_token, token_type="bearer")
 
 
-schema = strawberry.Schema(query=Query)  # u can add mutation by mutation=
+user_schema = strawberry.Schema(query=Query)  # u can add mutation via mutation=

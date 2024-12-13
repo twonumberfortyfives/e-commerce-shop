@@ -3,7 +3,6 @@ from fastapi.responses import JSONResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from dependencies.get_db import get_db
-from schemas.user_schema import schema
 from serializers import user_serializer
 from services.user_service import (
     get_all_users,
