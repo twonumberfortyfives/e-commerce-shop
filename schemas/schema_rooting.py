@@ -9,4 +9,3 @@ class Query(UserQuery, ProductQuery):
 
 
 schema = strawberry.Schema(query=Query)
-
