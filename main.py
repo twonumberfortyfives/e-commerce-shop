@@ -1,5 +1,7 @@
 from fastapi import FastAPI, Depends
 from fastapi.staticfiles import StaticFiles
+from fastapi.middleware.cors import CORSMiddleware
+
 from strawberry.fastapi import GraphQLRouter
 
 from api.v1.user import router as user_router
@@ -13,6 +15,22 @@ from sqladmin import Admin
 from schemas.schema_rooting import schema
 
 app = FastAPI()
+
+
+origins = [
+    "http://localhost:5173",
+    "http://localhost:8000",
+]
+
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,  # Set this to your frontend's origin
+    allow_credentials=True,
+    allow_methods=["*"],  # include additional methods as per the application demand
+    allow_headers=["*"],  # include additional headers as per the application demand
+)
+
 admin = Admin(app, engine)
 
 
