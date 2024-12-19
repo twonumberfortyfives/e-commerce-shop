@@ -97,3 +97,5 @@ class DBProduct(Base):
         "DBProductImage", back_populates="product", cascade="all, delete-orphan"
     )
     category = relationship("DBProductCategory", back_populates="products")
+
+# TODO: need to implement new model for orders
