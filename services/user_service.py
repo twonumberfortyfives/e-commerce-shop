@@ -63,7 +63,7 @@ async def create_verification_token(email: str) -> str:
 
 async def send_verification_email(email: str) -> None:
     token = await create_verification_token(email=email)
-    verification_link = f"http://localhost:8000/api/v1/verify?token={token}"
+    verification_link = f"http://localhost:8000/api/v1/users/verify?token={token}"
     message = MessageSchema(
         subject="Verification email",
         recipients=[email],
