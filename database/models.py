@@ -99,3 +99,5 @@ class DBProduct(Base):
     category = relationship("DBProductCategory", back_populates="products")
 
 # TODO: need to implement new model for orders
+
+# TODO: code refactoring

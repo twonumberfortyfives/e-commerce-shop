@@ -1,0 +1,13 @@
+DATABASE_URL="postgresql+asyncpg://postgres:postgres@postgres:5432/postgres"
+POSTGRES_USER=postgres
+POSTGRES_PASSWORD=postgres
+POSTGRES_DB=postgres
+ALGORITHM=HS256
+ACCESS_TOKEN_EXPIRE_MINUTES=30.0
+REFRESH_TOKEN_EXPIRE_MINUTES=60.0
+SECRET_KEY=secret_key
+MAIL_USERNAME=narutodesu22@gmail.com
+MAIL_PASSWORD="ypyd yhnd ftbv gepm"
+MAIL_FROM=narutodesu22@gmail.com
+MAIL_PORT=587
+DOMAIN=http://localhost:8000
