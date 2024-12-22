@@ -257,31 +257,31 @@ async def register_view(
 
 
 async def get_current_user(
-    request: Request, response: Response, db: AsyncSession
+    request: Request, db: AsyncSession
 ) -> models.DBUser:
-    access_token = (await refresh_view(request=request, response=response)).get(
-        "access_token"
-    )
+    access_token = request.headers.get("Authorization")[len("Bearer ") :]
     payload = jwt.decode(jwt=access_token, key=SECRET_KEY, algorithms=ALGORITHM)
     user_email = payload.get("sub")
     return await get_user_by_email(email=user_email, db=db)
 
 
 async def my_profile_view(
-    request: Request, response: Response, db: AsyncSession
+    request: Request, db: AsyncSession
 ) -> models.DBUser:
-    return await get_current_user(request=request, response=response, db=db)
+    access_token = request.headers.get("Authorization")[len("Bearer ") :]
+    payload = jwt.decode(jwt=access_token, key=SECRET_KEY, algorithms=ALGORITHM)
+    user_email = payload.get("sub")
+    return await get_user_by_email(email=user_email, db=db)
 
 
 async def edit_my_profile_view(
     request: Request,
-    response: Response,
     db: AsyncSession,
     username: str = None,
     bio: str = None,
     profile_picture: UploadFile | str = None,
 ):
-    current_user = await get_current_user(request=request, response=response, db=db)
+    current_user = await get_current_user(request=request, db=db)
     if username:
         current_user.username = username
     if bio:

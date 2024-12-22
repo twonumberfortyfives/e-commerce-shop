@@ -70,15 +70,14 @@ async def verify_email(token: str, db: AsyncSession = Depends(get_db)):
 
 @router.get("/my-profile", response_model=user_serializer.MyProfile)
 async def my_profile(
-    request: Request, response: Response, db: AsyncSession = Depends(get_db)
+    request: Request, db: AsyncSession = Depends(get_db)
 ):
-    return await my_profile_view(request=request, response=response, db=db)
+    return await my_profile_view(request=request, db=db)
 
 
 @router.patch("/my-profile", response_model=user_serializer.MyProfile)
 async def edit_my_profile(
     request: Request,
-    response: Response,
     username: str = None,
     bio: str = None,
     profile_picture: UploadFile | str = None,
@@ -89,6 +88,5 @@ async def edit_my_profile(
         bio=bio,
         profile_picture=profile_picture,
         request=request,
-        response=response,
         db=db,
     )
