@@ -56,7 +56,7 @@ async def create_refresh_token(data: dict, expires_delta: timedelta) -> str:
 
 
 async def create_verification_token(email: str) -> str:
-    expire = datetime.now(timezone.utc) + timedelta(hours=1)
+    expire = datetime.now(timezone.utc) + timedelta(hours=24)
     payload = {"email": email, "exp": expire}
     return jwt.encode(payload=payload, key=SECRET_KEY, algorithm=ALGORITHM)
 
@@ -143,21 +143,6 @@ async def logout_view(request: Request, response: Response) -> dict:
 
 
 async def refresh_view(request: Request, response: Response) -> dict:
-    auth_header = request.headers.get("Authorization")
-    if auth_header:
-        access_token = auth_header[len("Bearer ") :]
-        try:
-            payload = jwt.decode(jwt=access_token, key=SECRET_KEY, algorithms=ALGORITHM)
-            access_token = {
-                "access_token": payload,
-                "token_type": "bearer",
-            }
-            return access_token
-        except jwt.exceptions.ExpiredSignatureError:
-            pass
-        except jwt.exceptions.DecodeError:
-            raise HTTPException(status_code=400, detail="Invalid token")
-
     refresh_token = request.cookies.get("refresh_token")
     if not refresh_token:
         raise HTTPException(status_code=401, detail="Refresh token missing")
