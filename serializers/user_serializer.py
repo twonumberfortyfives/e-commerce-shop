@@ -27,7 +27,7 @@ class User(BaseModel):
 
 
 class LoginInput(BaseModel):
-    username: str
+    email: str
     password: str
 
 
