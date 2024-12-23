@@ -69,9 +69,7 @@ async def verify_email(token: str, db: AsyncSession = Depends(get_db)):
 
 
 @router.get("/my-profile", response_model=user_serializer.MyProfile)
-async def my_profile(
-    request: Request, db: AsyncSession = Depends(get_db)
-):
+async def my_profile(request: Request, db: AsyncSession = Depends(get_db)):
     return await my_profile_view(request=request, db=db)
 
 
