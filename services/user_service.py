@@ -102,7 +102,7 @@ async def get_user_by_email(db: AsyncSession, email: str) -> models.DBUser:
 
 
 async def login_view(
-    response: Response, login_serializer: LoginInput, db: AsyncSession
+        response: Response, login_serializer: LoginInput, db: AsyncSession
 ) -> dict:
     user = await get_user_by_email(db, login_serializer.email)
     if user:
@@ -219,7 +219,7 @@ async def verify_password(plain_password: str, hashed_password: str) -> bool:
 
 
 async def register_view(
-    register_serializer: UserCreate, db: AsyncSession
+        register_serializer: UserCreate, db: AsyncSession
 ) -> models.DBUser:
     try:
         user_email_match = await db.execute(
@@ -261,7 +261,7 @@ async def register_view(
 
 
 async def get_current_user(request: Request, db: AsyncSession) -> models.DBUser:
-    access_token = request.headers.get("Authorization")[len("Bearer ") :]
+    access_token = request.headers.get("Authorization")[len("Bearer "):]
     payload = jwt.decode(jwt=access_token, key=SECRET_KEY, algorithms=ALGORITHM)
     user_email = payload.get("sub")
     return await get_user_by_email(email=user_email, db=db)
@@ -269,7 +269,7 @@ async def get_current_user(request: Request, db: AsyncSession) -> models.DBUser:
 
 async def my_profile_view(request: Request, db: AsyncSession) -> models.DBUser:
     try:
-        access_token = request.headers.get("Authorization")[len("Bearer ") :]
+        access_token = request.headers.get("Authorization")[len("Bearer "):]
         payload = jwt.decode(jwt=access_token, key=SECRET_KEY, algorithms=ALGORITHM)
         user_email = payload.get("sub")
         return await get_user_by_email(email=user_email, db=db)
@@ -280,11 +280,11 @@ async def my_profile_view(request: Request, db: AsyncSession) -> models.DBUser:
 
 
 async def edit_my_profile_view(
-    request: Request,
-    db: AsyncSession,
-    username: str = None,
-    bio: str = None,
-    profile_picture: UploadFile | str = None,
+        request: Request,
+        db: AsyncSession,
+        username: str = None,
+        bio: str = None,
+        profile_picture: UploadFile | str = None,
 ):
     current_user = await get_current_user(request=request, db=db)
     if username:
@@ -306,3 +306,5 @@ async def edit_my_profile_view(
     except Exception as exc:
         await db.rollback()
         raise HTTPException(status_code=400, detail=str(exc))
+
+# TODO: implement logic for bucket
