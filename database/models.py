@@ -99,6 +99,19 @@ class DBProduct(Base):
     category = relationship("DBProductCategory", back_populates="products")
 
 
+class Order:
+    __tablename__ = "orders"
+
+    id = Column(
+        Integer,
+        primary_key=True,
+        autoincrement=True,
+        nullable=False,
+        unique=True,
+        index=True,
+    )
+
+
 # TODO: need to implement new model for orders
 
 # TODO: code refactoring
