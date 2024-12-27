@@ -46,3 +46,6 @@ class MyProfile(BaseModel):
     created_at: datetime
     profile_picture: str
     phone_number: str | None
+
+
+# TODO: add new schemas for future update
