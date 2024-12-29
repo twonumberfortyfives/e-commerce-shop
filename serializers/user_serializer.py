@@ -49,3 +49,5 @@ class MyProfile(BaseModel):
 
 
 # TODO: add new schemas for future update
+
+# TODO: has finished architecture schema, requires to implement plans here
